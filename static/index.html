@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARIA — CyberAI</title>
+  <style>
+    :root {
+      --bg: #050a0f; --panel: #0a1628; --border: #0d2137;
+      --accent: #00d4ff; --accent2: #ff3366;
+      --green: #00ff88; --text: #c8e6ff; --muted: #4a7a9b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Segoe UI', sans-serif; background: #0f0f1a;
+      color: #e0e0e0; height: 100%; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 14px 28px; background: var(--panel);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .logo { font-size: 1.4rem; font-weight: bold; color: var(--accent); letter-spacing: 3px; }
+    .status-bar { margin-left: auto; display: flex; gap: 20px; font-size: 0.75rem; color: var(--muted); }
+    .status-item { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    .dot.red { background: var(--accent2); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .layout {
+      display: grid; grid-template-columns: 280px 1fr;
+      flex: 1; min-height: 0; overflow: hidden;
+    }
+
+    .sidebar {
+      background: #1a1a2e; border-right: 1px solid #2a2a4a;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 20px 14px; gap: 10px;
+      overflow-y: auto; overflow-x: hidden; min-height: 0;
+      scrollbar-width: thin; scrollbar-color: #2a2a4a transparent;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+
+    .avatar-container { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+    .avatar-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 2px solid var(--accent); animation: rotate 8s linear infinite;
+    }
+    .avatar-ring::before {
+      content: ''; position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+      width: 10px; height: 10px; background: var(--accent); border-radius: 50%;
+    }
+    .avatar-ring-2 {
+      position: absolute; inset: 12px; border-radius: 50%;
+      border: 1px dashed rgba(0,212,255,0.3);
+      animation: rotate 5s linear infinite reverse;
+    }
+    @keyframes rotate { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+    .avatar-face {
+      position: absolute; inset: 24px; border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #0d3060, #020a18);
+      border: 2px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .avatar-eyes { display: flex; gap: 16px; margin-bottom: 10px; }
+    .eye {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 12px var(--accent);
+      animation: blink 4s infinite;
+    }
+    @keyframes blink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.05)} }
+    .avatar-mouth { width: 28px; height: 3px; background: var(--accent); border-radius: 3px; transition: all .3s; }
+    .avatar-mouth.talking { animation: talk 0.15s infinite alternate; }
+    @keyframes talk { from{height:3px} to{height:8px;border-radius:50%;} }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: rgba(0,212,255,0.15); animation: scan 3s linear infinite;
+    }
+    @keyframes scan { from{top:24px} to{top:116px} }
+
+    .avatar-name { font-size: 1.2rem; font-weight: bold; color: var(--accent); letter-spacing: 4px; }
+    .avatar-role { font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; }
+    .avatar-status {
+      font-size: 0.7rem; color: var(--green);
+      padding: 3px 10px; border: 1px solid var(--green);
+      border-radius: 20px; letter-spacing: 1px; text-align: center; width: 100%;
+    }
+
+    .stats { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .stat-item {
+      background: rgba(0,212,255,0.05); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.73rem;
+    }
+    .stat-label { color: var(--muted); }
+    .stat-value { color: var(--accent); font-weight: bold; }
+    .stat-value.red { color: var(--accent2); }
+    .stat-value.green { color: var(--green); }
+
+    .audit-progress-bar {
+      width: 100%; background: #0d2137; border-radius: 20px;
+      height: 6px; overflow: hidden; display: none;
+    }
+    .audit-progress-fill {
+      height: 100%; background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 20px; transition: width 0.4s ease;
+    }
+
+    .sidebar-btn {
+      width: 100%; padding: 9px; border-radius: 8px; cursor: pointer;
+      font-size: 0.8rem; font-weight: bold; font-family: inherit;
+      text-align: center; transition: all .2s;
+    }
+
+    .main {
+      display: flex; flex-direction: column;
+      overflow: hidden; min-height: 0;
+    }
+
+    .tabs-bar {
+      display: flex; gap: 4px; padding: 8px 16px;
+      background: #1a1a2e; border-bottom: 1px solid #2a2a4a;
+      flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: none;
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      padding: 5px 14px; font-size: 0.73rem; background: transparent;
+      border: 1px solid var(--border); border-radius: 20px;
+      color: var(--muted); cursor: pointer; transition: all .2s;
+      font-family: inherit; white-space: nowrap; flex-shrink: 0;
+    }
+    .tab-btn:hover, .tab-btn.active {
+      border-color: var(--accent); color: var(--accent);
+      background: rgba(0,212,255,0.07);
+    }
+
+    .content-area {
+      flex: 1; min-height: 0; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+
+    .tab-content {
+      display: none; flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: hidden; padding: 16px;
+      scrollbar-width: thin; scrollbar-color: #2a2a4a transparent;
+    }
+    .tab-content::-webkit-scrollbar { width: 4px; }
+    .tab-content::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+    .tab-content.active { display: block; }
+
+    #tab-chat {
+      display: none; flex-direction: column;
+      padding: 0; overflow: hidden; flex: 1; min-height: 0;
+    }
+    #tab-chat.active { display: flex; }
+
+    .messages {
+      flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: hidden;
+      padding: 20px 24px;
+      display: flex; flex-direction: column; gap: 14px;
+      scrollbar-width: thin; scrollbar-color: #2a2a4a transparent;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+
+    .msg { display: flex; gap: 12px; max-width: 85%; animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg-bubble {
+      padding: 12px 16px; border-radius: 12px;
+      font-size: 0.88rem; line-height: 1.6;
+      background: var(--panel); border: 1px solid var(--border);
+      word-break: break-word;
+    }
+    .msg.user .msg-bubble { background: rgba(0,212,255,0.08); border-color: rgba(0,212,255,0.3); }
+    .msg-avatar {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; border: 1px solid var(--border);
+    }
+    .msg.aria .msg-avatar { background: rgba(0,212,255,0.1); color: var(--accent); }
+    .msg.user .msg-avatar { background: rgba(255,51,102,0.1); color: var(--accent2); }
+    .tag-realtime {
+      display: inline-block; font-size: 0.65rem; padding: 2px 8px;
+      background: rgba(0,255,136,0.1); color: var(--green);
+      border: 1px solid var(--green); border-radius: 10px; margin-bottom: 6px;
+    }
+
+    .input-area {
+      flex-shrink: 0; padding: 14px; background: #1a1a2e;
+      border-top: 1px solid #2a2a4a; display: flex; flex-direction: column; gap: 8px;
+    }
+    .input-row { display: flex; gap: 10px; }
+    .chat-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 11px 14px; color: var(--text);
+      font-family: inherit; font-size: 0.9rem; resize: none; outline: none;
+      transition: border-color .2s; overflow-y: hidden;
+      min-height: 44px; max-height: 200px; line-height: 1.5;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+    .btn { padding: 10px 16px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-family: inherit; transition: all .2s; }
+    .btn-send { background: var(--accent); color: #000; font-weight: bold; }
+    .btn-send:hover { filter: brightness(1.2); }
+    .btn-mic { background: var(--panel); border: 1px solid var(--border); color: var(--text); font-size: 1.1rem; }
+    .btn-mic.listening { background: rgba(255,51,102,0.2); border-color: var(--accent2); color: var(--accent2); animation: pulse 1s infinite; }
+    .btn-reset { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: 0.75rem; }
+
+    .quick-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .quick-btn {
+      padding: 4px 11px; font-size: 0.71rem; background: transparent;
+      border: 1px solid var(--border); border-radius: 20px;
+      color: var(--muted); cursor: pointer; transition: all .2s; font-family: inherit;
+    }
+    .quick-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.05); }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.75); z-index: 100;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--panel); border: 1px solid var(--accent);
+      border-radius: 14px; padding: 24px;
+      width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto;
+    }
+    .modal h3 { color: var(--accent); margin-bottom: 14px; }
+    .modal input, .modal textarea, .modal select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; color: var(--text);
+      font-family: inherit; margin-bottom: 10px;
+    }
+    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+    .score-badge {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: bold;
+    }
+
+    @media (max-width: 700px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      header span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ ARIA</div>
+  <span style="color:var(--muted);font-size:0.75rem">Advanced Response & Intelligence Agent — CyberSecurity</span>
+  <div class="status-bar">
+    <div class="status-item"><div class="dot" id="cf-dot"></div> Cloudflare</div>
+    <div class="status-item"><div class="dot" id="def-dot"></div> Defender</div>
+    <div class="status-item"><div class="dot" id="jira-dot"></div> Jira</div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+    <div class="avatar-container">
+      <div class="avatar-ring"></div>
+      <div class="avatar-ring-2"></div>
+      <div class="avatar-face">
+        <div class="scan-line"></div>
+        <div class="avatar-eyes">
+          <div class="eye"></div>
+          <div class="eye"></div>
+        </div>
+        <div class="avatar-mouth" id="mouth"></div>
+      </div>
+    </div>
+
+    <div class="avatar-name">ARIA</div>
+    <div class="avatar-role">CYBER SECURITY AI AGENT</div>
+    <div class="avatar-status" id="aria-status">● ONLINE</div>
+
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-label">☁️ CF Threats/24h</span>
+        <span class="stat-value red" id="cf-threats">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">🛡️ Secure Score</span>
+        <span class="stat-value green" id="def-score">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">🚨 Active Alerts</span>
+        <span class="stat-value red" id="def-alerts">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">📋 Open Tickets</span>
+        <span class="stat-value" id="jira-tickets">—</span>
+      </div>
+    </div>
+
+    <div class="audit-progress-bar" id="audit-progress-bar">
+      <div class="audit-progress-fill" id="audit-progress-fill" style="width:0%"></div>
+    </div>
+    <div id="audit-progress-label" style="font-size:0.7rem;color:var(--muted);display:none;width:100%;text-align:center"></div>
+
+    <button class="sidebar-btn"
+      style="background:rgba(255,51,102,0.1);border:1px solid var(--accent2);color:var(--accent2)"
+      onclick="openOsintModal()">🕵️ Recherche OSINT</button>
+
+    <button class="sidebar-btn" id="btn-audit"
+      style="background:rgba(255,200,0,0.1);border:1px solid #ffc800;color:#ffc800"
+      onclick="runAudit()">🔍 Lancer un audit</button>
+
+    <button id="btn-pdf" onclick="downloadAuditPDF()"
+      style="display:none;width:100%;background:rgba(0,255,136,0.1);border:1px solid var(--green);
+      color:var(--green);padding:9px;border-radius:8px;cursor:pointer;font-size:0.8rem;
+      font-weight:bold;font-family:inherit">📄 Télécharger le PDF</button>
+
+    <button class="sidebar-btn"
+      style="background:rgba(255,51,102,0.1);border:1px solid var(--accent2);color:var(--accent2)"
+      onclick="openTicketModal()">🎫 Créer un ticket Jira</button>
+
+    <button class="sidebar-btn"
+      style="background:rgba(0,212,255,0.08);border:1px solid var(--accent);color:var(--accent)"
+      onclick="scanNetwork()">📡 Scanner le réseau</button>
+
+    <button class="sidebar-btn"
+      style="background:rgba(0,255,136,0.08);border:1px solid var(--green);color:var(--green)"
+      onclick="openExpandModal()">⚡ Ajouter des fonctionnalités</button>
+
+    <button class="sidebar-btn"
+      style="background:rgba(180,100,255,0.08);border:1px solid #b464ff;color:#b464ff"
+      onclick="showTab('learning');showLearningStats()">🧠 Stats d'apprentissage</button>
+
+    <button class="sidebar-btn"
+      style="background:rgba(255,200,0,0.08);border:1px solid #ffc800;color:#ffc800"
+      onclick="showTab('repair');loadProjectFiles()">🔧 Self-repair</button>
+
+    <button class="sidebar-btn"
+      style="background:transparent;border:1px solid var(--border);color:var(--muted)"
+      onclick="loadDashboard()">🔄 Rafraîchir les stats</button>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+
+    <div class="tabs-bar">
+      <button class="tab-btn active" id="tab-btn-chat"     onclick="showTab('chat')">💬 Chat</button>
+      <button class="tab-btn"        id="tab-btn-audit"    onclick="runAudit()">🔍 Audit</button>
+      <button class="tab-btn" onclick="sendQuick('Rédige un rapport de sécurité pour l\'incident suivant : ')">📋 Rapport incident</button>
+      <button class="tab-btn" onclick="sendQuick('Montre-moi les derniers événements Cloudflare')">☁️ Events CF</button>
+      <button class="tab-btn" onclick="sendQuick('Quelles sont les alertes Defender actives ?')">🚨 Alertes</button>
+      <button class="tab-btn" onclick="sendQuick('Quel est mon score de sécurité Defender ?')">📊 Score</button>
+      <button class="tab-btn" onclick="sendQuick('Liste les vulnérabilités critiques')">🔓 CVE</button>
+      <button class="tab-btn" onclick="sendQuick('Montre-moi les tickets Jira ouverts')">📋 Tickets</button>
+      <button class="tab-btn" onclick="sendQuick('Analyse le statut DDoS Cloudflare')">🌊 DDoS</button>
+      <button class="tab-btn" id="tab-btn-network"  onclick="showTab('network')">📡 Réseau</button>
+      <button class="tab-btn" id="tab-btn-learning" onclick="showTab('learning');showLearningStats()">🧠 Learning</button>
+      <button class="tab-btn" id="tab-btn-repair"   onclick="showTab('repair');loadProjectFiles()">🔧 Repair</button>
+    </div>
+
+    <div class="content-area">
+
+      <!-- ── TAB CHAT ── -->
+      <div id="tab-chat" class="tab-content active">
+        <div class="messages" id="messages">
+          <div class="msg aria">
+            <div class="msg-avatar">⬡</div>
+            <div class="msg-bubble">
+              Bonjour. Je suis <strong>ARIA</strong>, votre agente de cybersécurité.<br><br>
+              Je surveille en temps réel votre infrastructure :<br>
+              ☁️ <strong>Cloudflare</strong> — Firewall, DDoS, WAF<br>
+              🛡️ <strong>Microsoft Defender</strong> — Alertes, Vulnérabilités<br>
+              📋 <strong>Jira</strong> — Gestion des incidents<br><br>
+              Parlez-moi ou écrivez votre message. 🎤<br>
+              Cliquez sur <strong>🔍 Lancer un audit</strong> pour un audit complet avec export PDF.
+            </div>
+          </div>
+        </div>
+        <div class="input-area">
+          <div class="quick-actions">
+            <button class="quick-btn" style="border-color:#ffc800;color:#ffc800" onclick="runAudit()">🔍 Audit</button>
+            <button class="quick-btn" onclick="sendQuick('Rédige un rapport de sécurité pour l\'incident : ')">📋 Rapport</button>
+            <button class="quick-btn" onclick="sendQuick('Montre-moi les derniers événements Cloudflare')">☁️ Events CF</button>
+            <button class="quick-btn" onclick="sendQuick('Quelles sont les alertes Defender actives ?')">🚨 Alertes</button>
+            <button class="quick-btn" onclick="sendQuick('Quel est mon score de sécurité Defender ?')">📊 Score</button>
+            <button class="quick-btn" onclick="sendQuick('Liste les vulnérabilités critiques')">🔓 CVE</button>
+            <button class="quick-btn" onclick="sendQuick('Montre-moi les tickets Jira ouverts')">📋 Tickets</button>
+            <button class="quick-btn" onclick="sendQuick('Analyse le statut DDoS Cloudflare')">🌊 DDoS</button>
+            <button class="quick-btn" style="border-color:var(--accent);color:var(--accent)" onclick="scanNetwork();showTab('network')">📡 Scan réseau</button>
+          </div>
+          <div class="input-row">
+            <textarea class="chat-input" id="chat-input" rows="1"
+              placeholder="Posez votre question à ARIA... (Entrée pour envoyer)"
+              onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+            <button class="btn btn-mic" id="mic-btn" onclick="toggleMic()" title="Parler à ARIA">🎤</button>
+            <button class="btn btn-send" onclick="sendMessage()">Envoyer</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.7rem;color:var(--muted)" id="status-text">Prêt</span>
+            <button class="btn btn-reset" onclick="resetChat()">🗑️ Nouvelle session</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB RÉSEAU ── -->
+      <div id="tab-network" class="tab-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <h3 style="color:var(--accent)">📡 Cartographie & Sécurité réseau</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="showNetworkView('map')" id="view-map-btn"
+              style="background:rgba(0,212,255,0.15);border:1px solid var(--accent);color:var(--accent);
+              padding:7px 14px;border-radius:8px;cursor:pointer;font-size:0.78rem">🗺️ Carte</button>
+            <button onclick="showNetworkView('recs')" id="view-recs-btn"
+              style="background:transparent;border:1px solid var(--border);color:var(--muted);
+              padding:7px 14px;border-radius:8px;cursor:pointer;font-size:0.78rem">💡 Recommandations</button>
+            <button onclick="scanNetwork()"
+              style="background:var(--accent);color:#000;border:none;padding:7px 16px;
+              border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.78rem">🔍 Scanner</button>
+          </div>
+        </div>
+        <div id="network-view-map">
+          <div id="network-result"
+            style="color:var(--muted);font-size:0.85rem;text-align:center;padding:80px 0">
+            Aucun scan. Cliquez sur <strong style="color:var(--accent)">🔍 Scanner</strong>.
+          </div>
+        </div>
+        <div id="network-view-recs" style="display:none">
+          <div id="network-recs-content"
+            style="color:var(--muted);font-size:0.85rem;text-align:center;padding:80px 0">
+            Lancez un scan pour obtenir des recommandations.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB LEARNING ── -->
+      <div id="tab-learning" class="tab-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="color:#b464ff">🧠 Apprentissage autonome d'ARIA</h3>
+          <button onclick="showLearningStats()"
+            style="background:#b464ff;color:#fff;border:none;padding:8px 18px;
+            border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.82rem">🔄 Actualiser</button>
+        </div>
+        <div id="learning-stats-content"
+          style="color:var(--muted);font-size:0.85rem;text-align:center;padding:30px 0">Chargement...</div>
+        <div style="margin-top:20px;border-top:1px solid #0d2137;padding-top:16px">
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px">📚 Enseigner une nouvelle connaissance à ARIA :</p>
+          <input id="teach-topic" placeholder="Sujet (ex: CVE-2024-1234, nouvelle loi...)"
+            style="width:100%;background:#0a1628;border:1px solid #0d2137;color:var(--text);
+            padding:8px 12px;border-radius:6px;font-size:0.82rem;margin-bottom:8px;outline:none">
+          <textarea id="teach-content" placeholder="Contenu à apprendre..." rows="3"
+            style="width:100%;background:#0a1628;border:1px solid #0d2137;color:var(--text);
+            padding:8px 12px;border-radius:6px;font-size:0.82rem;resize:vertical;outline:none"></textarea>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+            <button onclick="teachARIA()"
+              style="background:#b464ff;color:#fff;border:none;padding:9px 20px;
+              border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.82rem">✅ Enseigner à ARIA</button>
+            <span id="teach-status" style="font-size:0.78rem;color:var(--green)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB REPAIR ── -->
+      <div id="tab-repair" class="tab-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="color:#ffc800">🔧 Self-repair — Structure du projet</h3>
+          <button onclick="loadProjectFiles()"
+            style="background:#ffc800;color:#000;border:none;padding:8px 18px;
+            border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.82rem">📂 Charger les fichiers</button>
+        </div>
+        <div id="repair-files-list"
+          style="color:var(--muted);font-size:0.85rem;text-align:center;padding:60px 0">
+          Cliquez sur "Charger les fichiers".
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL JIRA ═══ -->
+<div class="modal-overlay" id="ticket-modal">
+  <div class="modal">
+    <h3>🎫 Créer un ticket Jira</h3>
+    <input type="text" id="t-title" placeholder="Titre de l'incident">
+    <textarea id="t-desc" rows="4" placeholder="Description détaillée..."></textarea>
+    <select id="t-severity">
+      <option value="Critical">🔴 Critical</option>
+      <option value="High" selected>🟠 High</option>
+      <option value="Medium">🟡 Medium</option>
+      <option value="Low">🟢 Low</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn btn-reset" onclick="closeTicketModal()">Annuler</button>
+      <button class="btn btn-send" onclick="submitTicket()">Créer le ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL OSINT ═══ -->
+<div class="modal-overlay" id="osint-modal">
+  <div class="modal" style="width:560px;border-color:var(--accent2)">
+    <h3 style="color:var(--accent2)">🕵️ Recherche OSINT</h3>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px">
+      Recherche par nom, email, username ou numéro de téléphone
+    </p>
+    <input type="text" id="osint-query" style="border-color:var(--accent2)"
+      placeholder="Ex: john.doe@gmail.com / @johndoe / +33612345678 / Jean Dupont">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="quick-btn" style="border-color:#ff3366;color:#ff3366" onclick="setOsintQuery('email')">📧 Email</button>
+      <button class="quick-btn" style="border-color:#00d4ff;color:#00d4ff" onclick="setOsintQuery('username')">👤 Username</button>
+      <button class="quick-btn" style="border-color:#00ff88;color:#00ff88" onclick="setOsintQuery('phone')">📱 Téléphone</button>
+      <button class="quick-btn" onclick="setOsintQuery('name')">🔤 Nom complet</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-reset" onclick="closeOsintModal()">Annuler</button>
+      <button class="btn" style="background:var(--accent2);color:#fff;font-weight:bold" onclick="runOsint()">🔍 Rechercher</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL SELF-EXPAND ═══ -->
+<div class="modal-overlay" id="expand-modal">
+  <div class="modal" style="border-color:var(--green);width:540px">
+    <h3 style="color:var(--green)">⚡ Ajouter des fonctionnalités à ARIA</h3>
+    <div id="expand-features-list" style="color:var(--muted);font-size:0.82rem;padding:10px 0">Chargement...</div>
+    <div class="modal-btns">
+      <button class="btn btn-reset" onclick="closeExpandModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/voice.js"></script>
+<script src="/js/avatar.js"></script>
+<script>
+
+// ═══════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+  const tab    = document.getElementById("tab-" + name);
+  const tabBtn = document.getElementById("tab-btn-" + name);
+  if (tab)    tab.classList.add("active");
+  if (tabBtn) tabBtn.classList.add("active");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════════════════════
+let lastQuestion = "";
+
+async function sendMessage() {
+  const input = document.getElementById("chat-input");
+  const msg   = input.value.trim();
+  if (!msg) return;
+  lastQuestion = msg;
+  resetInput(); showTab("chat");
+  addMessage("user", msg);
+  setStatus("ARIA réfléchit..."); setTalking(true);
+
+  try {
+    const data        = await sendMessageWithVoice(msg);
+    const rawResponse = data.response || "";
+    let bubble = "";
+    if (data.has_realtime_data) bubble += `<div class="tag-realtime">⚡ Données temps réel</div><br>`;
+    bubble += rawResponse.replace(/\n/g,"<br>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>");
+    bubble += `
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button onclick="sendFeedback(this,true)"
+          data-q="${encodeURIComponent(msg)}" data-r="${encodeURIComponent(rawResponse)}"
+          style="background:rgba(0,255,136,0.1);border:1px solid var(--green);color:var(--green);
+          padding:3px 12px;border-radius:20px;cursor:pointer;font-size:0.73rem">👍 Utile</button>
+        <button onclick="sendFeedback(this,false)"
+          data-q="${encodeURIComponent(msg)}" data-r="${encodeURIComponent(rawResponse)}"
+          style="background:rgba(255,51,102,0.1);border:1px solid #ff3366;color:#ff3366;
+          padding:3px 12px;border-radius:20px;cursor:pointer;font-size:0.73rem">👎 Pas utile</button>
+      </div>`;
+    addMessage("aria", bubble, true);
+    speakText(rawResponse);
+    if (data.user?.first_name) updateUserBadge(data.user);
+    if (data.auto_ticket_suggestion?.suggested) {
+      setTimeout(() => {
+        document.getElementById("t-title").value = data.auto_ticket_suggestion.title;
+        if (confirm("⚠️ Incident critique. Créer un ticket Jira ?")) openTicketModal();
+      }, 1500);
+    }
+  } catch(e) { addMessage("aria", "❌ Erreur de connexion au serveur."); }
+  setStatus("Prêt"); setTalking(false);
+}
+
+async function sendFeedback(btn, positive) {
+  const q = decodeURIComponent(btn.dataset.q || "");
+  const r = decodeURIComponent(btn.dataset.r || "");
+  await fetch("/api/learn/feedback", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ question: q, response: r, positive })
+  });
+  btn.parentElement.innerHTML = positive
+    ? "<span style='color:var(--green);font-size:0.75rem'>✅ Merci !</span>"
+    : "<span style='color:#b464ff;font-size:0.75rem'>📝 ARIA va s'améliorer !</span>";
+}
+
+function sendQuick(msg) {
+  document.getElementById("chat-input").value = msg;
+  showTab("chat"); sendMessage();
+}
+function handleKey(e) { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
+}
+function resetInput() {
+  const i = document.getElementById("chat-input");
+  i.value = ""; i.style.height = "44px"; i.style.overflowY = "hidden";
+}
+async function resetChat() {
+  await fetch("/api/chat/reset", { method: "POST" });
+  document.getElementById("messages").innerHTML = "";
+  lastAuditResults = null;
+  document.getElementById("btn-pdf").style.display            = "none";
+  document.getElementById("audit-progress-bar").style.display  = "none";
+  document.getElementById("audit-progress-label").style.display = "none";
+  addMessage("aria", "Session réinitialisée. Comment puis-je vous aider ?");
+}
+function addMessage(role, html, isHtml = false) {
+  const container = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = `msg ${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar">${role==="aria" ? "⬡" : "👤"}</div>
+    <div class="msg-bubble">${isHtml ? html : escapeHtml(html)}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+function escapeHtml(t) {
+  return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+}
+function setStatus(msg) { document.getElementById("status-text").textContent = msg; }
+function updateUserBadge(user) {
+  const cols = { admin:"#ff3366", analyst:"#00d4ff", developer:"#00ff88", guest:"#4a7a9b" };
+  const c = cols[user.access_level] || "#4a7a9b";
+  document.getElementById("aria-status").innerHTML =
+    `● En ligne &nbsp;|&nbsp; <span style="color:${c}">👤 ${user.first_name} — ${user.access_label}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AUDIT
+// ═══════════════════════════════════════════════════════════════════
+let lastAuditResults = null;
+
+async function runAudit() {
+  if (!confirm("Lancer un audit de sécurité complet ?")) return;
+  const btn = document.getElementById("btn-audit");
+  btn.textContent = "⏳ Audit en cours..."; btn.disabled = true;
+  document.getElementById("btn-pdf").style.display = "none";
+  const bar   = document.getElementById("audit-progress-bar");
+  const fill  = document.getElementById("audit-progress-fill");
+  const label = document.getElementById("audit-progress-label");
+  bar.style.display = "block"; label.style.display = "block";
+
+  let progress = 0;
+  const steps  = ["Connexion Cloudflare...","Connexion Defender...","Connexion Jira...","Analyse..."];
+  const timer  = setInterval(() => {
+    progress = Math.min(progress + 8, 90);
+    fill.style.width  = progress + "%";
+    label.textContent = steps[Math.floor(progress / 25)] || "Analyse...";
+  }, 400);
+
+  showTab("chat");
+  addMessage("aria", "🔍 <strong>Audit lancé.</strong> Collecte des données...", true);
+  setStatus("Audit en cours..."); setTalking(true);
+
+  try {
+    const res  = await fetch("/api/audit/run", { method: "POST" });
+    const data = await res.json();
+    if (data.warnings?.length)
+      addMessage("aria", "⚠️ <strong>Systèmes partiellement inaccessibles :</strong><br>" +
+        data.warnings.join("<br>"), true);
+    lastAuditResults = data;
+    clearInterval(timer);
+    fill.style.width = "100%"; label.textContent = "Terminé ✓";
+
+    const score  = data.global_score;
+    const status = data.global_status;
+    const colors = { good:"#00ff88", warning:"#ffc800", critical:"#ff3366" };
+    const emojis = { good:"✅", warning:"⚠️", critical:"🚨" };
+    const labels = { good:"CONFORME", warning:"À AMÉLIORER", critical:"NON CONFORME" };
+    const color  = colors[status] || "#4a7a9b";
+
+    let bubble = `
+      <div style="margin-bottom:12px">
+        ${emojis[status]} <strong>Audit terminé —</strong>
+        <span class="score-badge" style="background:${color}22;color:${color};border:1px solid ${color}">
+          ${score}% — ${labels[status]}
+        </span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">`;
+    for (const [,domain] of Object.entries(data.domains || {})) {
+      const dc = colors[domain.status] || "#4a7a9b";
+      bubble += `
+        <div style="font-size:0.8rem">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span>${domain.label}</span>
+            <span style="color:${dc};font-weight:bold">${domain.score}%</span>
+          </div>
+          <div style="background:#0d2137;border-radius:4px;height:4px">
+            <div style="width:${domain.score}%;background:${dc};height:4px;border-radius:4px"></div>
+          </div>
+        </div>`;
+    }
+    bubble += `</div>`;
+    const recs = data.recommendations || [];
+    if (recs.length) {
+      bubble += `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">📋 ${recs.length} recommandation(s) :</div>`;
+      recs.slice(0,3).forEach(r => {
+        const rc = r.severity==="Critique" ? "#ff3366" : "#ffc800";
+        bubble += `<div style="font-size:0.75rem;padding:4px 8px;background:${rc}11;
+          border-left:2px solid ${rc};margin-bottom:4px;border-radius:0 4px 4px 0">
+          <strong style="color:${rc}">${r.severity}</strong> — ${r.issue}</div>`;
+      });
+    }
+    bubble += `
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="downloadAuditPDF()"
+          style="background:var(--green);color:#000;border:none;padding:8px 16px;
+          border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:bold">📄 Télécharger le PDF</button>
+        <button onclick="sendQuick('Explique-moi les recommandations de l\\'audit')"
+          style="background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid var(--accent);
+          padding:8px 16px;border-radius:8px;cursor:pointer;font-size:0.78rem">💬 Expliquer</button>
+      </div>`;
+    addMessage("aria", bubble, true);
+    speakText(`Audit terminé. Score : ${score} pourcent. ${recs.length} recommandations.`);
+    document.getElementById("btn-pdf").style.display = "block";
+  } catch(e) {
+    clearInterval(timer);
+    addMessage("aria","❌ Erreur audit : " + e.message);
+    label.textContent = "Erreur";
+  }
+  btn.textContent = "🔍 Relancer l'audit"; btn.disabled = false;
+  setStatus("Prêt"); setTalking(false);
+}
+
+async function downloadAuditPDF() {
+  if (!lastAuditResults) { alert("Lancez d'abord un audit."); return; }
+  const btn = document.getElementById("btn-pdf");
+  btn.textContent = "⏳ Génération...";
+  try {
+    const res  = await fetch("/api/audit/pdf", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ results: lastAuditResults, company: "Lemonway" })
+    });
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `audit_${new Date().toISOString().slice(0,10)}.pdf`;
+    a.click(); URL.revokeObjectURL(url);
+    addMessage("aria","📄 <strong>Rapport PDF téléchargé.</strong>", true);
+  } catch(e) { addMessage("aria","❌ Erreur PDF : " + e.message); }
+  btn.textContent = "📄 Télécharger le PDF";
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OSINT
+// ═══════════════════════════════════════════════════════════════════
+function openOsintModal()  { document.getElementById("osint-modal").classList.add("open"); }
+function closeOsintModal() { document.getElementById("osint-modal").classList.remove("open"); }
+function setOsintQuery(type) {
+  const ex = { email:"jean.dupont@gmail.com", username:"johndoe", phone:"+33612345678", name:"Jean Dupont" };
+  document.getElementById("osint-query").placeholder = `Ex: ${ex[type]}`;
+  document.getElementById("osint-query").focus();
+}
+async function runOsint() {
+  const query = document.getElementById("osint-query").value.trim();
+  if (!query) { alert("Entrez une recherche"); return; }
+  closeOsintModal(); showTab("chat");
+  addMessage("user", `🕵️ Recherche OSINT : ${query}`);
+  addMessage("aria","⏳ <strong>Analyse OSINT en cours...</strong>", true);
+  setStatus("OSINT..."); setTalking(true);
+  try {
+    const res  = await fetch("/api/osint/search", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    const s    = data.summary || {};
+    const rc   = { "Faible":"#00ff88","Moyen":"#ffc800","Élevé":"#ff3366" }[s.exposure_risk] || "#4a7a9b";
+    const social   = data.sources?.social_networks?.found || [];
+    const username = data.sources?.username_check?.found  || [];
+    const breaches = data.sources?.data_breaches || {};
+    const dorks    = data.sources?.google_dorks?.search_urls || [];
+
+    let bubble = `
+      <div style="margin-bottom:10px">
+        🕵️ <strong>OSINT :</strong> <code>${query}</code>
+        &nbsp;<span style="background:${rc}22;color:${rc};border:1px solid ${rc};
+          padding:2px 10px;border-radius:20px;font-size:0.72rem">Exposition : ${s.exposure_risk || "?"}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:rgba(0,212,255,0.06);border:1px solid #0d2137;border-radius:8px;padding:10px;font-size:0.8rem">
+          👤 <strong>${s.profiles_found || 0}</strong> profil(s)
+        </div>
+        <div style="background:rgba(255,51,102,0.06);border:1px solid #0d2137;border-radius:8px;padding:10px;font-size:0.8rem">
+          🔓 <strong>${s.data_breaches || 0}</strong> fuite(s)
+        </div>
+      </div>`;
+    if (social.length) {
+      bubble += `<div style="margin-bottom:8px"><strong style="font-size:0.8rem">📱 Réseaux sociaux :</strong><br>`;
+      social.forEach(p => {
+        bubble += `<a href="${p.url}" target="_blank"
+          style="display:inline-block;margin:3px;padding:3px 10px;background:rgba(0,212,255,0.08);
+          border:1px solid #0d2137;border-radius:20px;color:var(--accent);font-size:0.75rem;text-decoration:none">
+          ${p.platform} ↗</a>`;
+      });
+      bubble += `</div>`;
+    }
+    if (username.length) {
+      bubble += `<div style="margin-bottom:8px"><strong style="font-size:0.8rem">🌐 Autres plateformes :</strong><br>`;
+      username.forEach(p => {
+        bubble += `<a href="${p.url}" target="_blank"
+          style="display:inline-block;margin:3px;padding:3px 10px;background:rgba(0,255,136,0.08);
+          border:1px solid #0d2137;border-radius:20px;color:var(--green);font-size:0.75rem;text-decoration:none">
+          ${p.site} ↗</a>`;
+      });
+      bubble += `</div>`;
+    }
+    if (breaches.breached) {
+      bubble += `<div style="padding:8px;background:rgba(255,51,102,0.08);
+        border:1px solid rgba(255,51,102,0.3);border-radius:8px;margin-bottom:8px">
+        🔓 <strong style="color:#ff3366">${breaches.count} fuite(s)</strong><br>`;
+      (breaches.breaches || []).slice(0,4).forEach(b => {
+        bubble += `<span style="font-size:0.75rem">• ${b.name} (${b.date})</span><br>`;
+      });
+      bubble += `</div>`;
+    }
+    if (dorks.length) {
+      bubble += `<strong style="font-size:0.8rem">🔎 Recherches avancées :</strong><br>`;
+      dorks.slice(0,3).forEach((url, i) => {
+        const dork = data.sources?.google_dorks?.dorks?.[i] || `Dork ${i+1}`;
+        bubble += `<a href="${url}" target="_blank"
+          style="display:block;font-size:0.73rem;color:var(--muted);margin:2px 0;
+          padding:4px 8px;border-radius:4px;background:rgba(255,255,255,0.03);text-decoration:none">
+          🔗 ${dork}</a>`;
+      });
+    }
+    addMessage("aria", bubble, true);
+    speakText(`Recherche terminée. ${s.profiles_found || 0} profil trouvé.`);
+  } catch(e) { addMessage("aria","❌ Erreur OSINT : " + e.message); }
+  setStatus("Prêt"); setTalking(false);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NETWORK SCANNER
+// ═══════════════════════════════════════════════════════════════════
+let lastScanData    = null;
+let scanController  = null;   // AbortController pour annuler le scan
+
+function showNetworkView(view) {
+  document.getElementById("network-view-map").style.display  = view==="map"  ? "block" : "none";
+  document.getElementById("network-view-recs").style.display = view==="recs" ? "block" : "none";
+  const mapBtn  = document.getElementById("view-map-btn");
+  const recsBtn = document.getElementById("view-recs-btn");
+  mapBtn.style.background   = view==="map"  ? "rgba(0,212,255,0.15)" : "transparent";
+  recsBtn.style.background  = view==="recs" ? "rgba(0,212,255,0.15)" : "transparent";
+  mapBtn.style.color        = view==="map"  ? "var(--accent)" : "var(--muted)";
+  recsBtn.style.color       = view==="recs" ? "var(--accent)" : "var(--muted)";
+  mapBtn.style.borderColor  = view==="map"  ? "var(--accent)" : "var(--border)";
+  recsBtn.style.borderColor = view==="recs" ? "var(--accent)" : "var(--border)";
+  if (view==="recs" && lastScanData) renderRecommendations(lastScanData);
+}
+
+// ─── Variable globale pour le timer ───────────────────────────────
+let _scanTimerInterval = null;
+
+async function scanNetwork() {
+  showTab("network"); showNetworkView("map");
+
+  // ── Nettoie tout interval précédent avant d'en créer un nouveau ──
+  if (_scanTimerInterval) { clearInterval(_scanTimerInterval); _scanTimerInterval = null; }
+
+  let elapsed = 0;
+
+  document.getElementById("network-result").innerHTML = `
+    <div style="text-align:center;padding:60px 0">
+      <div style="font-size:2rem;animation:pulse 1s infinite">📡</div>
+      <div style="color:var(--accent);font-size:0.9rem;margin-top:12px">Scan en cours...</div>
+      <div style="color:var(--muted);font-size:0.78rem;margin-top:6px" id="scan-timer">0s</div>
+      <button onclick="cancelScan()"
+        style="margin-top:16px;background:transparent;border:1px solid #ff3366;color:#ff3366;
+        padding:6px 18px;border-radius:8px;cursor:pointer;font-size:0.76rem">✕ Annuler</button>
+    </div>`;
+
+  // ── Un seul interval, stocké globalement ──────────────────────────
+  _scanTimerInterval = setInterval(() => {
+    elapsed += 1;
+    const el = document.getElementById("scan-timer");
+    if (el) el.textContent = `${elapsed}s — scan en cours...`;
+  }, 1000);
+
+  try {
+    if (scanController) scanController.abort();
+    scanController = new AbortController();
+    const timeout = setTimeout(() => scanController.abort(), 180000);
+
+    const res  = await fetch("/api/network/scan", { method:"POST", signal: scanController.signal });
+    clearTimeout(timeout);
+
+    // ── Stoppe le timer dès la réponse ───────────────────────────────
+    clearInterval(_scanTimerInterval); _scanTimerInterval = null;
+
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById("network-result").innerHTML =
+        `<div style="color:#ff3366;text-align:center;padding:40px">❌ ${data.error}</div>`;
+      return;
+    }
+    lastScanData = data;
+    renderNetworkMap(data);
+
+  } catch(e) {
+    clearInterval(_scanTimerInterval); _scanTimerInterval = null;
+    const msg = e.name === "AbortError"
+      ? "⏱️ Scan annulé ou délai dépassé (3 min)."
+      : `❌ Erreur : ${e.message}`;
+    document.getElementById("network-result").innerHTML =
+      `<div style="color:#ff3366;text-align:center;padding:40px">${msg}</div>`;
+  }
+}
+
+function cancelScan() {
+  clearInterval(_scanTimerInterval); _scanTimerInterval = null;
+  if (scanController) { scanController.abort(); scanController = null; }
+}
+function cancelScan() {
+  if (scanController) { scanController.abort(); scanController = null; }
+}
+
+function renderNetworkMap(data) {
+  const s    = data.summary      || {};
+  const sec  = data.security     || {};
+  const net  = data.network_info || {};
+  const sc   = sec.score >= 80 ? "var(--green)" : sec.score >= 50 ? "#ffc800" : "#ff3366";
+  const recs = sec.recommendations || [];
+
+  let html = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:rgba(0,212,255,0.06);border:1px solid #0d2137;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px">SSID</div>
+        <div style="font-size:0.85rem;color:var(--accent);font-weight:bold;word-break:break-all">${net.ssid || "WiFi"}</div>
+      </div>
+      <div style="background:rgba(0,212,255,0.06);border:1px solid #0d2137;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px">Appareils</div>
+        <div style="font-size:1.4rem;font-weight:bold;color:var(--accent)">${s.appareils_détectés || 0}</div>
+      </div>
+      <div style="background:rgba(255,200,0,0.06);border:1px solid #0d2137;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px">Ports ouverts</div>
+        <div style="font-size:1.4rem;font-weight:bold;color:#ffc800">${s.ports_ouverts || 0}</div>
+      </div>
+      <div style="background:${sc}11;border:1px solid ${sc}44;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.7rem;color:var(--muted);margin-bottom:4px">Score sécurité</div>
+        <div style="font-size:1.4rem;font-weight:bold;color:${sc}">${sec.score}/100</div>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px">
+        <span style="color:var(--muted)">Posture de sécurité</span>
+        <span style="color:${sc};font-weight:bold">${sec.status || "?"}</span>
+      </div>
+      <div style="background:#0d2137;border-radius:20px;height:8px">
+        <div style="width:${sec.score}%;background:linear-gradient(90deg,${sc},${sc}88);
+          height:8px;border-radius:20px;transition:width 1s ease"></div>
+      </div>
+    </div>`;
+
+  const devices = data.devices || [];
+  html += `
+    <div style="margin-bottom:16px">
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:8px">🗺️ Topologie du réseau</div>
+      <div style="background:#05080f;border:1px solid #0d2137;border-radius:10px;padding:10px">
+        <svg viewBox="0 0 700 ${Math.max(220, Math.ceil(devices.length / 4) * 100 + 120)}"
+          width="100%" style="display:block">
+          ${buildNetworkSVG(data)}
+        </svg>
+      </div>
+    </div>`;
+
+  html += `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:8px">💻 Appareils détectés</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-bottom:16px">`;
+  devices.forEach(d => {
+    const ports   = data.open_ports?.[d.ip] || [];
+    const hasRisk = ports.some(p => p.risk?.includes("RISQUE"));
+    const borderC = hasRisk ? "rgba(255,51,102,0.35)" : "#0d2137";
+    html += `
+      <div style="background:rgba(255,255,255,0.02);border:1px solid ${borderC};
+        border-radius:8px;padding:10px;font-size:0.78rem;cursor:pointer"
+        onclick="togglePortDetail('ports-${d.ip.replace(/\./g,'_')}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:1rem">${d.type.split(" ")[0]}</span>
+          <span style="color:${hasRisk ? '#ff3366' : 'var(--green)'};font-size:0.7rem">
+            ${hasRisk ? "⚠️ Risque" : "✅ OK"}</span>
+        </div>
+        <div style="color:var(--accent);font-weight:bold">${d.ip}</div>
+        <div style="color:var(--muted);font-size:0.72rem">${d.hostname !== d.ip ? d.hostname : ""}</div>
+        <div style="color:var(--muted);font-size:0.72rem">${d.vendor} — MAC: ${d.mac}</div>
+        <div id="ports-${d.ip.replace(/\./g,'_')}" style="display:none;margin-top:8px;
+          border-top:1px solid #0d2137;padding-top:8px">
+          ${ports.length > 0
+            ? ports.map(p => `
+                <div style="font-size:0.72rem;padding:2px 0;
+                  color:${p.risk?.includes('RISQUE') ? '#ff3366' : 'var(--muted)'}">
+                  ${p.risk?.includes('RISQUE') ? '🔴' : '🟡'} ${p.port}/${p.service}
+                </div>`).join("")
+            : `<div style="font-size:0.72rem;color:var(--green)">Aucun port exposé ✅</div>`}
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+
+  const issues = sec.issues || [];
+  if (issues.length) {
+    html += `<div style="font-size:0.82rem;color:#ff3366;margin-bottom:8px">⚠️ ${issues.length} problème(s) détecté(s)</div>`;
+    issues.forEach(issue => {
+      const c = issue.severity==="Critique" ? "#ff3366"
+              : issue.severity==="Élevé"    ? "#ff6633"
+              : issue.severity==="Moyen"    ? "#ffc800" : "#4a7a9b";
+      html += `
+        <div style="padding:10px 14px;background:${c}0d;border:1px solid ${c}44;
+          border-radius:8px;margin:5px 0;font-size:0.8rem">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <strong style="color:${c}">[${issue.severity}] ${issue.category}</strong>
+            <code style="color:var(--muted);font-size:0.72rem">${issue.ip}</code>
+          </div>
+          <div style="margin-bottom:4px">${issue.issue}</div>
+          <div style="color:var(--green);font-size:0.75rem">→ ${issue.fix}</div>
+          <div style="color:var(--muted);font-size:0.72rem;margin-top:2px">💥 Impact : ${issue.impact}</div>
+        </div>`;
+    });
+  }
+
+  if (recs.length) {
+    html += `
+      <div style="margin-top:16px;padding:12px 16px;background:rgba(0,212,255,0.04);
+        border:1px solid rgba(0,212,255,0.15);border-radius:10px">
+        <div style="font-size:0.8rem;color:var(--accent);font-weight:bold;margin-bottom:6px">
+          💡 ${recs.length} recommandation(s)
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px">
+          ${recs.slice(0,3).map(r=>`${r.icon} ${r.title}`).join(" · ")}
+          ${recs.length > 3 ? ` + ${recs.length-3} autres` : ""}
+        </div>
+        <button onclick="showNetworkView('recs')"
+          style="background:var(--accent);color:#000;border:none;padding:7px 18px;
+          border-radius:8px;cursor:pointer;font-weight:bold;font-size:0.78rem">
+          Voir les recommandations →
+        </button>
+      </div>`;
+  }
+
+  document.getElementById("network-result").innerHTML = html;
+}
+
+function buildNetworkSVG(data) {
+  const devices = data.devices || [];
+  const gateway = data.network_info?.gateway || "";
+  const localIp = data.network_info?.local_ip || "";
+  const cx = 350, cy = 70;
+
+  let svg = `<defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+  svg += `
+    <circle cx="${cx}" cy="${cy}" r="28" fill="#0d3060" stroke="#00d4ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="${cx}" y="${cy-35}" text-anchor="middle" fill="#4a7a9b" font-size="11">${gateway || "Routeur"}</text>
+    <text x="${cx}" y="${cy+5}"  text-anchor="middle" fill="#00d4ff" font-size="18">🌐</text>`;
+
+  const valid = devices.filter(d => d.ip !== gateway && d.ip !== localIp);
+  const all   = localIp && localIp !== gateway
+    ? [{ ip: localIp, type: "🛡️ ARIA", vendor: "Local" }, ...valid]
+    : [...valid];
+
+  all.forEach((d, i) => {
+    const angle   = (Math.PI / (all.length + 1)) * (i + 1);
+    const x       = cx + 210 * Math.cos(angle - Math.PI / 2) * (i % 2 === 0 ? 1 : 0.82);
+    const y       = cy + 130 + Math.sin(angle) * 75;
+    const ports   = data.open_ports?.[d.ip] || [];
+    const hasRisk = ports.some(p => p.risk?.includes("RISQUE"));
+    const nodeC   = d.ip === localIp ? "#b464ff" : hasRisk ? "#ff3366" : "var(--green)";
+    const icon    = d.type?.split(" ")[0] || "💻";
+    svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}"
+      stroke="${nodeC}33" stroke-width="1.5" stroke-dasharray="${hasRisk ? '4,2' : 'none'}"/>`;
+    svg += `
+      <circle cx="${x}" cy="${y}" r="22" fill="#0a1628" stroke="${nodeC}"
+        stroke-width="${hasRisk ? 2 : 1.5}" opacity="0.9"/>
+      <text x="${x}" y="${y+6}"  text-anchor="middle" font-size="15">${icon}</text>
+      <text x="${x}" y="${y+35}" text-anchor="middle" fill="${nodeC}" font-size="10">${d.ip}</text>
+      ${hasRisk ? `<circle cx="${x+16}" cy="${y-16}" r="7" fill="#ff3366"/>
+        <text x="${x+16}" y="${y-12}" text-anchor="middle" fill="#fff" font-size="9">!</text>` : ""}`;
+  });
+  return svg;
+}
+
+function togglePortDetail(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function renderRecommendations(data) {
+  const recs  = data.security?.recommendations || [];
+  const el    = document.getElementById("network-recs-content");
+  const score = data.security?.score || 0;
+  const sc    = score >= 80 ? "var(--green)" : score >= 50 ? "#ffc800" : "#ff3366";
+  if (!recs.length) {
+    el.innerHTML = `<div style="color:var(--green);text-align:center;padding:40px">✅ Réseau bien sécurisé !</div>`;
+    return;
+  }
+  const effortC = { "Faible":"var(--green)","Moyen":"#ffc800","Élevé":"#ff6633" };
+  const impactC = { "Très élevé":"#ff3366","Élevé":"#ff6633","Critique":"#ff3366","Moyen":"#ffc800","Faible":"var(--muted)" };
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:6px">
+      <div>
+        <span style="font-size:0.82rem;color:var(--muted)">Score actuel : </span>
+        <strong style="color:${sc}">${score}/100</strong>
+        <span style="font-size:0.78rem;color:var(--muted);margin-left:8px">
+          → Objectif : <strong style="color:var(--green)">85+</strong>
+        </span>
+      </div>
+      <span style="font-size:0.78rem;color:var(--muted)">${recs.length} recommandation(s)</span>
+    </div>`;
+  recs.forEach((r, i) => {
+    const ec = effortC[r.effort] || "var(--muted)";
+    const ic = impactC[r.impact] || "var(--muted)";
+    html += `
+      <div style="background:rgba(255,255,255,0.02);border:1px solid #0d2137;
+        border-radius:10px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="background:rgba(0,212,255,0.1);border:1px solid var(--accent);
+              border-radius:6px;padding:4px 10px;font-size:0.7rem;color:var(--accent);font-weight:bold">#${i+1}</div>
+            <div style="font-size:0.9rem;font-weight:bold">${r.icon} ${r.title}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span style="background:${ec}15;border:1px solid ${ec}44;color:${ec};
+              padding:2px 8px;border-radius:20px;font-size:0.7rem">Effort : ${r.effort}</span>
+            <span style="background:${ic}15;border:1px solid ${ic}44;color:${ic};
+              padding:2px 8px;border-radius:20px;font-size:0.7rem">Impact : ${r.impact}</span>
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px">${r.description}</p>
+        <div style="margin-bottom:10px">
+          <div style="font-size:0.75rem;color:var(--accent);margin-bottom:6px">📋 Étapes :</div>
+          ${r.steps.map((step,j) => `
+            <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #0d2137">
+              <span style="background:#0d2137;border-radius:50%;width:18px;height:18px;
+                display:flex;align-items:center;justify-content:center;
+                font-size:0.65rem;color:var(--accent);flex-shrink:0;margin-top:1px">${j+1}</span>
+              <span style="font-size:0.78rem">${step}</span>
+            </div>`).join("")}
+        </div>
+        <div style="margin-top:8px">
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:4px">🛠️ Outils :</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${r.tools.map(t => `
+              <span style="background:rgba(0,212,255,0.06);border:1px solid #0d2137;
+                border-radius:20px;padding:2px 10px;font-size:0.72rem;color:var(--muted)">${t}</span>`).join("")}
+          </div>
+        </div>
+        <div style="margin-top:10px;text-align:right">
+          <button onclick="askARIAAbout('${r.title.replace(/'/g,"")}')"
+            style="background:rgba(0,212,255,0.1);border:1px solid var(--accent);
+            color:var(--accent);padding:5px 14px;border-radius:8px;cursor:pointer;font-size:0.75rem">
+            💬 Demander à ARIA
+          </button>
+        </div>
+      </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function askARIAAbout(topic) {
+  showTab("chat");
+  document.getElementById("chat-input").value =
+    `Comment mettre en place : ${topic} ? Donne-moi un guide pratique étape par étape.`;
+  sendMessage();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LEARNING
+// ═══════════════════════════════════════════════════════════════════
+async function showLearningStats() {
+  const el = document.getElementById("learning-stats-content");
+  el.innerHTML = `<span style="color:var(--muted)">Chargement...</span>`;
+  try {
+    const res  = await fetch("/api/learn/stats");
+    const data = await res.json();
+    const sat  = parseFloat(data.taux_satisfaction) || 0;
+    const sc   = sat >= 70 ? "var(--green)" : sat >= 40 ? "#ffc800" : "#ff3366";
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+        <div style="background:rgba(180,100,255,0.06);border:1px solid #0d2137;border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:bold;color:#b464ff">${data.conversations_analysées}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">Conversations</div>
+        </div>
+        <div style="background:rgba(0,255,136,0.06);border:1px solid #0d2137;border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:bold;color:var(--green)">${data.connaissances_acquises}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">Connaissances</div>
+        </div>
+        <div style="background:rgba(0,212,255,0.06);border:1px solid #0d2137;border-radius:8px;padding:14px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:bold;color:${sc}">${data.taux_satisfaction}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">Satisfaction</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:rgba(255,255,255,0.02);border:1px solid #0d2137;border-radius:8px;padding:12px">
+          <div style="font-size:0.78rem;color:var(--green);margin-bottom:4px">👍 ${data.feedback_positif} positifs</div>
+          <div style="font-size:0.78rem;color:#ff3366">👎 ${data.feedback_négatif} négatifs</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:6px">💡 ${data.meilleures_réponses} meilleures réponses</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.02);border:1px solid #0d2137;border-radius:8px;padding:12px">
+          <div style="font-size:0.75rem;color:var(--muted);margin-bottom:6px">🔥 Top menaces</div>
+          ${Object.entries(data.menaces_top5 || {}).map(([k,v]) =>
+            `<div style="font-size:0.72rem;color:var(--accent)">• ${k} : ${v}x</div>`
+          ).join("") || '<div style="font-size:0.72rem;color:var(--muted)">Aucune menace</div>'}
+        </div>
+      </div>`;
+  } catch(e) { el.innerHTML = `<div style="color:#ff3366">❌ Erreur : ${e.message}</div>`; }
+}
+
+async function teachARIA() {
+  const topic   = document.getElementById("teach-topic").value.trim();
+  const content = document.getElementById("teach-content").value.trim();
+  const status  = document.getElementById("teach-status");
+  if (!topic || !content) {
+    status.textContent = "⚠️ Sujet et contenu requis"; status.style.color = "#ffc800"; return;
+  }
+  const res  = await fetch("/api/learn/teach", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ topic, content })
+  });
+  const data = await res.json();
+  if (data.learned) {
+    status.textContent = `✅ ARIA a appris : "${topic}"`; status.style.color = "var(--green)";
+    document.getElementById("teach-topic").value   = "";
+    document.getElementById("teach-content").value = "";
+    showLearningStats();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REPAIR
+// ═══════════════════════════════════════════════════════════════════
+async function loadProjectFiles() {
+  const el = document.getElementById("repair-files-list");
+  el.innerHTML = `<span style="color:var(--muted)">Chargement...</span>`;
+  try {
+    const res   = await fetch("/api/repair/files");
+    const data  = await res.json();
+    const files = data.files || [];
+    const ok    = files.filter(f => f.exists).length;
+    const ko    = files.filter(f => !f.exists).length;
+    el.innerHTML = `
+      <div style="display:flex;gap:12px;margin-bottom:14px;font-size:0.8rem">
+        <span style="color:var(--green)">✅ ${ok} OK</span>
+        <span style="color:#ff3366">❌ ${ko} manquant(s)</span>
+      </div>`;
+    files.forEach(f => {
+      el.innerHTML += `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:7px 12px;background:rgba(255,255,255,0.02);
+          border:1px solid ${f.exists ? '#0d2137' : 'rgba(255,51,102,0.2)'};
+          border-radius:6px;margin:3px 0;font-size:0.78rem">
+          <span style="color:${f.exists ? 'var(--text)' : '#ff3366'}">
+            ${f.exists ? '✅' : '❌'} <code>${f.path}</code>
+          </span>
+          <span style="color:var(--muted)">${f.exists ? f.lines + ' lignes' : 'manquant'}</span>
+        </div>`;
+    });
+  } catch(e) { el.innerHTML = `<div style="color:#ff3366">❌ Erreur : ${e.message}</div>`; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SELF-EXPAND
+// ═══════════════════════════════════════════════════════════════════
+function openExpandModal()  { document.getElementById("expand-modal").classList.add("open"); loadExpandFeatures(); }
+function closeExpandModal() { document.getElementById("expand-modal").classList.remove("open"); }
+
+async function loadExpandFeatures() {
+  const el = document.getElementById("expand-features-list");
+  try {
+    const res   = await fetch("/api/expand/list");
+    const data  = await res.json();
+    const feats = data.features || [];
+    el.innerHTML = "";
+    feats.forEach(f => {
+      el.innerHTML += `
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid #0d2137;
+          border-radius:8px;margin:5px 0">
+          <div>
+            <div style="font-size:0.82rem;font-weight:bold;color:var(--text)">${f.name}</div>
+            <div style="font-size:0.73rem;color:var(--muted)">${f.description} — ${f.complexity}</div>
+          </div>
+          ${f.installed
+            ? `<span style="color:var(--green);font-size:0.75rem;flex-shrink:0">✅ Installée</span>`
+            : `<button onclick="installFeature('${f.id}')"
+                style="background:var(--green);color:#000;border:none;padding:5px 12px;
+                border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:bold;flex-shrink:0">
+                Installer</button>`}
+        </div>`;
+    });
+  } catch(e) { el.innerHTML = `<div style="color:#ff3366">❌ Erreur : ${e.message}</div>`; }
+}
+
+async function installFeature(featureId) {
+  const res  = await fetch("/api/expand/install", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ feature_id: featureId })
+  });
+  const data = await res.json();
+  if (data.status === "installed") { alert(`✅ ${data.feature} installée !`); loadExpandFeatures(); }
+  else alert(`❌ ${data.message || data.error}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// JIRA
+// ═══════════════════════════════════════════════════════════════════
+function openTicketModal()  { document.getElementById("ticket-modal").classList.add("open"); }
+function closeTicketModal() { document.getElementById("ticket-modal").classList.remove("open"); }
+
+async function submitTicket() {
+  const title = document.getElementById("t-title").value;
+  const desc  = document.getElementById("t-desc").value;
+  const sev   = document.getElementById("t-severity").value;
+  if (!title) { alert("Titre requis"); return; }
+  const res  = await fetch("/api/jira/create", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ title, description: desc, severity: sev })
+  });
+  const data = await res.json();
+  closeTicketModal(); showTab("chat");
+  if (data.status === "ok")
+    addMessage("aria", `✅ Ticket créé : <strong>${data.ticket_id}</strong>`, true);
+  else
+    addMessage("aria", `❌ Erreur Jira : ${data.message}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const res  = await fetch("/api/dashboard");
+    const data = await res.json();
+    if (data.cloudflare?.threats !== undefined) {
+      document.getElementById("cf-threats").textContent  = data.cloudflare.threats;
+      document.getElementById("cf-dot").style.background = "var(--green)";
+    }
+    if (data.defender_score?.percentage !== undefined) {
+      document.getElementById("def-score").textContent   = data.defender_score.percentage + "%";
+      document.getElementById("def-dot").style.background = "var(--green)";
+    }
+    if (data.alerts_count?.count !== undefined)
+      document.getElementById("def-alerts").textContent  = data.alerts_count.count;
+    if (data.open_tickets?.count !== undefined) {
+      document.getElementById("jira-tickets").textContent  = data.open_tickets.count;
+      document.getElementById("jira-dot").style.background = "var(--green)";
+    }
+  } catch(e) { console.warn("Dashboard non disponible"); }
+}
+
+window.onload = () => { loadDashboard(); showLearningStats(); };
+</script>
+</body>
+</html>
